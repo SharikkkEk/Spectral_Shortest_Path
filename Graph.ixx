@@ -61,6 +61,7 @@ void Graph::add_edge(size_t beg, size_t dst, double price) {
 }
 
 Graph::Graph(vector<vector<double>> matrix) {
+	adjacency_list.resize(matrix.size());
 	for (size_t i = 0; i < matrix.size(); ++i) {
 		for (size_t j = 0; j < matrix[i].size(); ++j) {
 			if (matrix[i][j] != 0)

@@ -66,7 +66,6 @@ public:
 	size_t size() const override { return _data.size(); }
 };
 
-export vector<vector<double>> generate_symmetric_matrix(size_t n, double min_val = -10.0, double max_val = 10.0, bool zero_diagonal = false);
 
 double operator*(const vector<double>& lvector, const vector<double>& rvector);
 vector<double> operator-(const vector<double>& v1, const vector<double>& v2);
@@ -141,8 +140,25 @@ vector<double> Eigvector_solver::operator()(const Matrix& matrix) {
 		}
 		normalize(_eigvector);
 	}
-
+#ifdef DEBUG
+	auto check = matrix * _eigvector;
+	for (size_t i = 0; i < _eigvector.size(); ++i)
+		std::cout << _eigvector[i] << ' ' << check[i] << '\n';
+#endif
 	return _eigvector;
+}
+
+double get_cos_normalized_v(const std::vector<double>& v) {
+	return std::accumulate(v.begin(), v.end(), 0.0) / sqrt(v.size());
+}
+
+export std::vector<double> convert_normalized_v_to2D(const std::vector<double>& v) {
+	double cos_v = get_cos_normalized_v(v);
+	double sin_v = sqrt(1 - cos_v * cos_v);
+	std::vector<double> res(2);
+	res[0] = cos_v;
+	res[1] = sin_v;
+	return res;
 }
 
 py_eigvector_history Eigvector_solver::solve_with_history(const Matrix& matrix) {
@@ -163,8 +179,14 @@ py_eigvector_history Eigvector_solver::solve_with_history(const Matrix& matrix) 
 
 		auto end = std::chrono::high_resolution_clock::now();
 		double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
-		history.push_back({ vector<double>(_eigvector.begin(), _eigvector.begin()+2), elapsed_seconds});
+		history.push_back({ convert_normalized_v_to2D(_eigvector), elapsed_seconds });
 	}
+	
+#ifdef DEBUG
+	auto check = matrix * _eigvector;
+	for (size_t i = 0; i < _eigvector.size(); ++i)
+		std::cout << _eigvector[i] << ' ' << check[i] << '\n';
+#endif
 
 	return history;
 }

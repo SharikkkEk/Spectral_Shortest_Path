@@ -27,13 +27,14 @@ py_path_history dijkstra_history(std::vector<std::vector<double>> matrix){
 	return dijkstra_path_history(0, matrix.size()-1, graph).to_list();
 }
 
-std::vector<double> eigenvector(std::vector<std::vector<double>> matrix_of_graph) {
-	return Eigvector_solver{}(Standard_matrix{ matrix_of_graph });
-	//Graph graph{ matrix_of_graph };
-	//Cutted_laplassian laplassian { matrix_of_graph.size()-1, graph};
+std::vector<double> eigenvector_2D(std::vector<std::vector<double>> matrix_of_graph) {
+	Graph graph{ matrix_of_graph };
+	Cutted_laplassian laplassian { matrix_of_graph.size()-1, graph};
+	std::vector<double> eigvector = Eigvector_solver{}(laplassian);
+	return convert_normalized_v_to2D(eigvector);
 }
 
-py_eigvector_history eigenvector_history(std::vector<std::vector<double>> matrix_of_graph) {
+py_eigvector_history eigenvector_2D_history(std::vector<std::vector<double>> matrix_of_graph) {
 	Graph graph{ matrix_of_graph };
 	Cutted_laplassian laplassian { matrix_of_graph.size()-1, graph};
 	Eigvector_solver solver{};
@@ -44,15 +45,14 @@ std::vector<std::vector<double>> test(std::vector<std::vector<double>> v) {
 	return v;
 }
 
-PYBIND11_MODULE(SpectralPath, m) { 
-
+PYBIND11_MODULE(SpectralPath, m) {
 	m.def("rand_sparse_graph", matrix_random_sp_graph, "");
 	m.def("rand_dense_graph", matrix_random_d_graph, "");
 	m.def("rand_tree", matrix_random_tree, "");
 	m.def("spectral_history", spectral_history, "");
 	m.def("dijkstra_history", dijkstra_history, "");
-	m.def("eigenvector", eigenvector, "");
-	m.def("eigenvector_history", eigenvector_history, "");
+	m.def("eigenvector_2D", eigenvector_2D, "");
+	m.def("eigenvector_2D_history", eigenvector_2D_history, "");
 	m.def("test", test, "");
 }
 
@@ -62,9 +62,7 @@ PYBIND11_MODULE(SpectralPath, m) {
 //		{1, 0, 3},
 //		{2, 3, 0}
 //	};
-//	Standard_matrix m{ v };
-//	Eigvector_solver solver{};
-//	std::vector<double> res = solver(m);
-//	for (double i : res)
-//		std::cout << i << '\n';
+//	Graph g{ v };
+//	eigenvector_2D(v);
+//	eigenvector_2D_history(v);
 //}
