@@ -27,6 +27,11 @@ py_path_history dijkstra_history(std::vector<std::vector<double>> matrix){
 	return dijkstra_path_history(0, matrix.size()-1, graph).to_list();
 }
 
+py_adjacency_list get_py_adjacency_list(std::vector<std::vector<double>> matrix) {
+	Graph graph{ matrix };
+	return get_adjacency_list(graph);
+}
+
 std::vector<double> eigenvector_2D(std::vector<std::vector<double>> matrix_of_graph) {
 	Graph graph{ matrix_of_graph };
 	Cutted_laplassian laplassian { matrix_of_graph.size()-1, graph};
@@ -51,6 +56,7 @@ PYBIND11_MODULE(SpectralPath, m) {
 	m.def("rand_tree", matrix_random_tree, "");
 	m.def("spectral_history", spectral_history, "");
 	m.def("dijkstra_history", dijkstra_history, "");
+	m.def("get_adjacency_list", get_py_adjacency_list, "");
 	m.def("eigenvector_2D", eigenvector_2D, "");
 	m.def("eigenvector_2D_history", eigenvector_2D_history, "");
 	m.def("test", test, "");

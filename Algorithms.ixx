@@ -67,10 +67,10 @@ export path_history dijkstra_path_history(size_t beg, size_t dst, Graph& graph) 
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto start = std::chrono::high_resolution_clock::now();
+	double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
+	history.add(current.number, elapsed_seconds);
 
     while (current.number != dst) {
-		double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
-		history.add(current.number, elapsed_seconds);
 		start = std::chrono::high_resolution_clock::now();
 
 		dist.erase(current.number);
@@ -83,6 +83,8 @@ export path_history dijkstra_path_history(size_t beg, size_t dst, Graph& graph) 
 		current = { dist.begin()->first, dist.begin()->second };
 
 		end = std::chrono::high_resolution_clock::now();
+		double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
+		history.add(current.number, elapsed_seconds);
     }
 
 	return history;
@@ -103,10 +105,10 @@ export path_history spectral_path_history(size_t curr, size_t dst, Graph& graph)
 	double price = 0;
 	auto start = std::chrono::high_resolution_clock::now();
 	auto end = std::chrono::high_resolution_clock::now();
+	double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
+	history.add(curr, elapsed_seconds);
 	
 	while (curr != dst) {
-		double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
-		history.add(curr, elapsed_seconds);
 		start = std::chrono::high_resolution_clock::now();
 
 		visited[curr] = true;
@@ -120,6 +122,8 @@ export path_history spectral_path_history(size_t curr, size_t dst, Graph& graph)
 		curr = next.number;
 
 		end = std::chrono::high_resolution_clock::now();
+		double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
+		history.add(curr, elapsed_seconds);
 	}
 	
 	return history;

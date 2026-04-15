@@ -1,59 +1,65 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from SpectralPath import rand_sparse_graph, eigenvector_2D, eigenvector_2D_history
 
-
-
-def visualize_eigenvector(matrix):
-    history = eigenvector_2D_history(matrix)
-    final_eigenvector = eigenvector_2D(matrix)
-    plt.figure()
-
-    iterations = [np.array(vec) for vec, _ in history]
-    times = [t for _, t in history]
-    
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.set_xlim(-1.5, 1.5)
-    ax.set_ylim(-1.5, 1.5)
-    ax.set_aspect('equal')
-    ax.grid(True, alpha=0.3)
-    
-    circle = plt.Circle((0, 0), 1, fill=False, color='gray', linestyle='-', linewidth=1.5)
-    ax.add_patch(circle)
-    
-    ax.annotate('', xy=(final_eigenvector[0], final_eigenvector[1]), xytext=(0, 0),
-                arrowprops=dict(arrowstyle='->', color='red', linestyle='--', lw=2))
-
-    current_arrow = ax.annotate('', xy=(1, 1), xytext=(0, 0),
-                               arrowprops=dict(arrowstyle='->', color='blue', lw=2.5,
-                                               mutation_scale=20))
-    
-    info_text = ax.text(-1.4, 1.3, '', fontsize=10)
-
-    ax.plot([], [], 'r--', lw=2, label='Настоящий собственный вектор')
-    ax.plot([], [], 'b--', lw=4, label='Текущая итерация')
-    ax.legend(loc='upper right')
-    
-    def update(frame):
-        nonlocal current_arrow
-        current_arrow.remove()
+class Eig_visualizer:
+    def __init__(self, matrix, history, eigvector, fig, ax, path_vis):
+        self.matrix = matrix
+        self.history = history
+        self.eigvector = eigvector
+        self.fig = fig
+        self.ax = ax
+        self.anim = None
+        self.path_vis = path_vis
         
-        current_arrow = ax.annotate('', xy=(iterations[frame][0], iterations[frame][1]), xytext=(0, 0),
+    def visualize_eigenvector(self):
+        iterations = [np.array(vec) for vec, _ in self.history]
+        times = [t for _, t in self.history]
+        
+        self.ax.set_xlim(-1.5, 1.5)
+        self.ax.set_ylim(-1.5, 1.5)
+        self.ax.set_aspect('equal')
+        self.ax.grid(True, alpha=0.3)
+        
+        circle = plt.Circle((0, 0), 1, fill=False, color='gray', linestyle='-', linewidth=1.5)
+        self.ax.add_patch(circle)
+        
+        self.ax.annotate('', xy=(self.eigvector[0], self.eigvector[1]), xytext=(0, 0),
+                    arrowprops=dict(arrowstyle='->', color='red', linestyle='--', lw=2))
+
+        current_arrow = self.ax.annotate('', xy=(1, 1), xytext=(0, 0),
                                    arrowprops=dict(arrowstyle='->', color='blue', lw=2.5,
                                                    mutation_scale=20))
         
-        info_text.set_text(f'Iteration: {frame + 1}/{len(iterations)}\nTime: {times[frame]:.2f} ms')
-        
-        return current_arrow, info_text
-    
-    anim = animation.FuncAnimation(
-        fig, update, frames=len(iterations),
-        interval=max(50, 5000 // len(iterations)), blit=False
-    )
-    
-    plt.title('Eigenvector Finding Visualization')
-    plt.show()
+        info_text = self.ax.text(-1.4, 1.3, '', fontsize=10)
 
-matrix = rand_sparse_graph(40)
-visualize_eigenvector(matrix)
+        self.ax.plot([], [], 'r--', lw=2, label='Настоящий собственный вектор')
+        self.ax.plot([], [], 'b--', lw=4, label='Текущая итерация')
+        self.ax.legend(loc='upper right')
+        
+        def update(frame):
+            if frame == len(iterations):
+                if self.anim:
+                    self.anim.event_source.stop()
+                    plt.cla()
+                    self.path_vis.visualize_path()
+                return
+            
+            nonlocal current_arrow
+            current_arrow.remove()
+            
+            current_arrow = self.ax.annotate('', xy=(iterations[frame][0], iterations[frame][1]), xytext=(0, 0),
+                                       arrowprops=dict(arrowstyle='->', color='blue', lw=2.5,
+                                                       mutation_scale=20))
+            
+            info_text.set_text(f'Iteration: {frame + 1}/{len(iterations)}\nTime: {times[frame]:.2f} ms')
+            
+            return current_arrow, info_text
+
+        interval_ms = 50
+        self.anim = animation.FuncAnimation(
+            self.fig, update, frames=len(iterations)+1,
+            interval=interval_ms, blit=False
+        )
+        
+        plt.title('Eigenvector Finding Visualization')
