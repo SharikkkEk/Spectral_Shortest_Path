@@ -71,7 +71,7 @@ double EigvectorSolver::armijo(const SquareMatrix& A, const vector<double>& x) {
     return alpha;
 }
 
-// Вычитаем из градиента компоненту, уводящую её со сферы(скалярное произведение - это проекция одного вектора на другой)
+// Substract from gradent component that takes it off the sphere (dot product is projection of one vector on another)
 void EigvectorSolver::riemannienGradient(const SquareMatrix& A, const vector<double>& x) {
 	for (int i = 0; i < x.size(); ++i) {
 		_gradient[i] = 2 * (A.productRow(x, i) - _currentFunctionValue * x[i]);

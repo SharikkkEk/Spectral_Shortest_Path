@@ -1,4 +1,4 @@
-export module Algorithms;
+﻿export module Algorithms;
 
 import std;
 import Matrix;
@@ -22,6 +22,19 @@ export double Dijkstra(size_t beg, size_t dst, Graph graph, MinHeap& dist) {
     return current.price;
 }
 
+
+/*
+Approximates shortest path on not-oriented graph
+ - Works, because component of vertex in eigenVector becomes bigger, if adjacent vertices have bigger price and/or bigger value in eigenVector
+
+Invariant: eigenVector[dst] == 0, eigenVector[i] >= 0 for all i
+
+Why removing row and column correspondending to destination vertex:
+1. Removes trivial eigenVector of laplassian (1, 1, 1, 1...)
+2. Vertices adjacent to dst loose one neighbor, so their value in eigenvector becomes smaller, thanks to property of laplassian eigenvector
+
+Complexity: O(E*k), where E - number of edges, k - number of iterations in gradient descent
+*/
 export double spectralPath(size_t curr, size_t dst, Graph& graph) {
 	CuttedLaplassian laplassian{ dst, graph };
 	EigvectorSolver solver{};
