@@ -27,5 +27,20 @@
     <ClCompile Include="main.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="Benchmark.ixx">
+      <Filter>Файлы заголовков</Filter>
+    </ClCompile>
+    <ClCompile Include="Solver.ixx">
+      <Filter>Файлы заголовков</Filter>
+    </ClCompile>
+    <ClCompile Include="ConstantsAndUtils.ixx">
+      <Filter>Файлы заголовков</Filter>
+    </ClCompile>
+    <ClCompile Include="Python.ixx">
+      <Filter>Файлы заголовков</Filter>
+    </ClCompile>
+    <ClCompile Include="BinHeap.ixx">
+      <Filter>Файлы заголовков</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

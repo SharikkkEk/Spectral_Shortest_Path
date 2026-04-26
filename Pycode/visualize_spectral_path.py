@@ -1,10 +1,10 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from SpectralPath import rand_sparse_graph, spectral_history, get_adjacency_list, dijkstra_history, eigenvector_2D, eigenvector_2D_history
+from SpectralPath import rand_sparse_graph, spectral_history, get_adjacency_list, dijkstra_history, eigenvector_2D, eigenvector_2D_history, rand_tree, rand_dense_graph, spectral, dijkstra
 
 from visualize_eigenvector import Eig_visualizer
-matrix = rand_sparse_graph(50)
+matrix = rand_dense_graph(50)
 
 class Path_visualizer:
     def __init__(self, matrix, path, fig, ax):
@@ -60,7 +60,8 @@ class Path_visualizer:
             
             info_text.set_text(f'Vertex: {current_node}\n'
                              f'Step: {frame + 1}/{len(path_vertices)}\n'
-                             f'Time: {path_times[frame]:.2f} ms')
+                             f'Sum Dijkstra: {int(dijkstra(self.matrix))}\n'
+                             f'Sum Spectral: {int(spectral(self.matrix))}')
             
             return info_text
 
