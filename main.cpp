@@ -1,9 +1,9 @@
-import std;
+﻿import std;
 import Benchmark;
 import Graph;
 import Matrix;
 import Algorithms;
-
+import Solver;
 int main() {
-	testAlgorithms(GraphType::Sparse, 1000, 10);
+	testAlgorithms(GraphType::Sparse, 100);
 }

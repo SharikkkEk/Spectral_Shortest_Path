@@ -1,32 +1,17 @@
-export module Matrix;
-
+п»їexport module Matrix;
 import std;
-import Graph;
-
 using namespace std;
 
 // ===== DECLARATIONS =====
 
 export struct SquareMatrix {
-	// В принципе удалить оператор произведения сейчас можно
+	// Р’ РїСЂРёРЅС†РёРїРµ СѓРґР°Р»РёС‚СЊ РѕРїРµСЂР°С‚РѕСЂ РїСЂРѕРёР·РІРµРґРµРЅРёСЏ СЃРµР№С‡Р°СЃ РјРѕР¶РЅРѕ
 	virtual vector<double> operator*(const vector<double>&) const = 0;
 	virtual size_t size() const = 0;
 	virtual double calcRaleigh(const vector<double>&) const = 0;
 	virtual double productRow(const vector<double>& v, size_t row) const = 0;
 };
 
-export class CuttedLaplassian : public SquareMatrix {
-private:
-	size_t _cutted;
-	Graph& _graph;
-public:
-	CuttedLaplassian(size_t dst, Graph& graph) 
-		: _cutted{ dst }, _graph{ graph } {}
-	vector<double> operator*(const vector<double>&) const override;
-	double calcRaleigh(const vector<double>&) const override;
-	double productRow(const vector<double>& v, size_t row) const override;
-	size_t size() const override { return _graph.verticesCount(); }
-};
 
 export class StandardMatrix : public SquareMatrix {
 private:
@@ -34,6 +19,8 @@ private:
 public:
 	StandardMatrix(const vector<vector<double>>& Data) : _data{ Data } {}
 	vector<double> operator*(const vector<double>& vector) const override;
+	double calcRaleigh(const vector<double>&) const override;
+	double productRow(const vector<double>& v, size_t row) const override;
 	size_t size() const override { return _data.size(); }
 };
 
@@ -43,7 +30,7 @@ export double eucledeNorm(const vector<double>& v);
 export double norm(const vector<double>& v);
 export void normalize(vector<double>& v);
 
-// В данный момент это всё дерьмо лишнее
+// Р’ РґР°РЅРЅС‹Р№ РјРѕРјРµРЅС‚ СЌС‚Рѕ РІСЃС‘ РґРµСЂСЊРјРѕ Р»РёС€РЅРµРµ
 export double dot(const vector<double>& lvector, const vector<double>& rvector);
 export vector<double> operator-(const vector<double>& v1, const vector<double>& v2);
 export vector<double> operator*(double scale, const vector<double>& v);
@@ -51,54 +38,17 @@ export vector<double>& operator*=(vector<double>& v, double scale);
 
 // ===== IMPL ======
 
-double CuttedLaplassian::productRow(const vector<double>& v, size_t row) const {
+double StandardMatrix::calcRaleigh(const vector<double>& v) const {
 	double sum = 0;
-	const vector<Vertex>& adjacentVertices = _graph.adjacentVertices(row);
-	for (Vertex vertex : adjacentVertices) {
-		if (vertex.number != _cutted)
-			sum += vertex.price * (v[row] - v[vertex.number]);
-		else
-			sum += vertex.price * v[row];
-	}
+	for (int i = 0; i < _data.size(); ++i)
+		sum += v[i] * productRow(v, i);
 	return sum;
 }
 
-double CuttedLaplassian::calcRaleigh(const vector<double>& v) const {
-	double sum = 0;
-	for (int i = 0; i < _graph.verticesCount(); ++i) {
-		const vector<Vertex>& adjacentVertices = _graph.adjacentVertices(i);
-		for (Vertex vertex : adjacentVertices) {
-			if (vertex.number >= i) {
-				if (vertex.number != _cutted) {
-					double diff = v[i] - v[vertex.number];
-					sum += vertex.price * diff * diff;
-				}
-				else {
-					sum += vertex.price * v[i] * v[i];
-				}
-			}
-		}
-	}
-	return sum;
-}
-
-vector<double> CuttedLaplassian::operator*(const vector<double>& mult_vector) const {
-	vector<double> res(mult_vector.size(), 0);
-	size_t vertex = 0;
-	
-	for (vertex = 0; vertex != size(); ++vertex)
-		if (vertex != _cutted) {
-			res[vertex] = 0;
-
-			for (Vertex adjacentVertex : _graph.adjacentVertices(vertex))
-				if (adjacentVertex.number != _cutted)
-					res[vertex] += adjacentVertex.price * (mult_vector[vertex] - mult_vector[adjacentVertex.number]);
-				else
-					res[vertex] += adjacentVertex.price * mult_vector[vertex];
-		}
-
-	res[_cutted] = 0;
-
+double StandardMatrix::productRow(const vector<double>& v, size_t row) const {
+	double res = 0;
+	for (int i = 0; i < _data[row].size(); ++i)
+		res += _data[row][i] * v[i];
 	return res;
 }
 

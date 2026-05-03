@@ -4,7 +4,7 @@ import matplotlib.animation as animation
 from SpectralPath import rand_sparse_graph, spectral_history, get_adjacency_list, dijkstra_history, eigenvector_2D, eigenvector_2D_history, rand_tree, rand_dense_graph, spectral, dijkstra
 
 from visualize_eigenvector import Eig_visualizer
-matrix = rand_dense_graph(50)
+matrix = rand_tree(20)
 
 class Path_visualizer:
     def __init__(self, matrix, path, fig, ax):

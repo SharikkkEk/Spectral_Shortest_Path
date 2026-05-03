@@ -17,6 +17,7 @@ private:
 	vector<double> _gradient;
 	vector<double> _auxiliaryVector;
 	double _currentFunctionValue;
+
 	double armijo(const SquareMatrix& A, const vector<double>& x);
 	void riemannienGradient(const SquareMatrix& A, const vector<double>& x);
 public:
@@ -28,21 +29,25 @@ public:
 
 vector<double> EigvectorSolver::operator()(const SquareMatrix& matrix) {
 	_eigvector = vector<double>(matrix.size(), 1);
-	normalize(_eigvector);
 	_gradient = vector<double>(matrix.size(), 1);
 	_auxiliaryVector = vector<double>(matrix.size(), 1);
+
 	double learning_rate = 1;
 	_currentFunctionValue = matrix.calcRaleigh(_eigvector);
 	double diff = 0;
 
+	normalize(_eigvector);
+
 	do {
 		double oldFunctionValue = _currentFunctionValue;
+
 		riemannienGradient(matrix, _eigvector);
 		learning_rate = armijo(matrix, _eigvector);
 		for (int i = 0; i < _eigvector.size(); ++i) {
 			_eigvector[i] -= learning_rate * _gradient[i]; // ��� ������
 		}
 		normalize(_eigvector);
+
 		_currentFunctionValue = matrix.calcRaleigh(_eigvector);
 		diff = abs(_currentFunctionValue - oldFunctionValue);
 	} while (diff > error);
@@ -71,16 +76,14 @@ double EigvectorSolver::armijo(const SquareMatrix& A, const vector<double>& x) {
     return alpha;
 }
 
-// Substract from gradent component that takes it off the sphere (dot product is projection of one vector on another)
+// Substract from gradient component that takes it off the sphere (dot product is projection of one vector on another)
 void EigvectorSolver::riemannienGradient(const SquareMatrix& A, const vector<double>& x) {
 	for (int i = 0; i < x.size(); ++i) {
 		_gradient[i] = 2 * (A.productRow(x, i) - _currentFunctionValue * x[i]);
 	}
 }
 
-/*
-*	Косинус получаем по отношению к единичному вектору
-*/
+// Косинус получаем по отношению к единичному вектору
 double getNormalizedVectorCos(const std::vector<double>& v) {
 	double len = sqrt(v.size()); // У единичного вектора в n-ной размерности длина равна корню из количества его элементов
 	return std::accumulate(v.begin(), v.end(), 0.0) / len;
@@ -104,7 +107,7 @@ PyEigvectorHistory EigvectorSolver::solveWithHistory(const SquareMatrix& matrix)
 	
 	while (norm(_gradient) > error) {
 		auto start = std::chrono::high_resolution_clock::now();
-
+		
 		riemannienGradient(matrix, _eigvector);
 		learning_rate = armijo(matrix, _eigvector);
 		for (int i = 0; i < _eigvector.size(); ++i) {
@@ -114,6 +117,7 @@ PyEigvectorHistory EigvectorSolver::solveWithHistory(const SquareMatrix& matrix)
 
 		auto end = std::chrono::high_resolution_clock::now();
 		double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
+
 		history.push_back({ mapVectorTo2D(_eigvector), elapsed_seconds });
 	}
 	

@@ -12,9 +12,11 @@ export double Dijkstra(size_t beg, size_t dst, Graph graph, MinHeap& dist) {
 	Vertex current{ beg, 0 };
 
     while (!dist.empty() && current.number != dst) {
-		for (Vertex vertex : graph.adjacentVertices(current.number)) {
-			if (dist.has(vertex.number) && dist.findVertex(vertex.number).price > vertex.price + current.price)
-				dist.decreaseKey(vertex.number, vertex.price + current.price);
+		for (int i = 0; i < graph.adjacentVerticesCount(current.number); ++i) {
+			size_t vertexNumber = graph.adjacentVertexNumber(current.number, i);
+			double vertexPrice = graph.adjacentVertexPrice(current.number, i);
+			if (dist.has(vertexNumber) && dist.findVertex(vertexNumber).price > vertexPrice + current.price ) 
+				dist.decreaseKey(vertexNumber, vertexPrice + current.price);
 		}
 		current = dist.pop();
     }
@@ -37,10 +39,10 @@ Complexity: O(E*k), where E - number of edges, k - number of iterations in gradi
 */
 export double spectralPath(size_t curr, size_t dst, Graph& graph) {
 	CuttedLaplassian laplassian{ dst, graph };
-	EigvectorSolver solver{};
-	std::vector<double> eigen_vector = solver(laplassian);
+	std::vector<double> eigen_vector = EigvectorSolver{} (laplassian);
 	eigen_vector.insert(eigen_vector.begin() + dst, 0);
 	std::unordered_map<size_t, bool> visited;
+
 	for (size_t i = 0; i < graph.verticesCount(); ++i) {
 		visited[i] = false;
 		eigen_vector[i] = std::abs(eigen_vector[i]);
@@ -49,15 +51,20 @@ export double spectralPath(size_t curr, size_t dst, Graph& graph) {
 	
 	while (curr != dst) {
 		visited[curr] = true;
-		auto& adjacentVertices = graph.adjacentVertices(curr);
 		Vertex next = { 0, std::numeric_limits<double>::infinity()};
 		double minEigenValue = std::numeric_limits<double>::infinity();
-		for (auto vertex : adjacentVertices) {
-			if (!visited[vertex.number] && eigen_vector[vertex.number] <= minEigenValue) {
-				minEigenValue = eigen_vector[vertex.number];
-				next = vertex;
+
+		for (int i = 0; i < graph.adjacentVerticesCount(curr); ++i) {
+			size_t vertexNumber = graph.adjacentVertexNumber(curr, i);
+			double vertexPrice = graph.adjacentVertexPrice(curr, i);
+
+			if (!visited[vertexNumber] && eigen_vector[vertexNumber] < minEigenValue) {
+				minEigenValue = eigen_vector[vertexNumber];
+				next.number = vertexNumber;
+				next.price = vertexPrice;
 			}
 		}
+
 		price += next.price;
 		curr = next.number;
 	}
@@ -79,23 +86,24 @@ export pathHistory dijkstraPathHistory(size_t beg, size_t dst, Graph& graph) {
 	while (current.number != dst) {
 		dist.erase(current.number);
 
-		for (Vertex vertex : graph.adjacentVertices(current.number)) {
-			if (dist.find(vertex.number) != dist.end()) {
-				double new_dist = vertex.price + current.price;
-				if (new_dist < dist[vertex.number]) {
-					dist[vertex.number] = new_dist;
-					prev[vertex.number] = current.number;  
+		for (int i = 0; i < graph.adjacentVerticesCount(current.number); ++i) {
+			size_t vertexNumber = graph.adjacentVertexNumber(current.number, i);
+			double vertexPrice = graph.adjacentVertexPrice(current.number, i);
+
+			if (dist.find(vertexNumber) != dist.end()) {
+				double new_dist = vertexPrice + current.price;
+				if (new_dist < dist[vertexNumber]) {
+					dist[vertexNumber] = new_dist;
+					prev[vertexNumber] = current.number;  
 				}
 			}
 		}
 
 		current = { dist.begin()->first, dist.begin()->second };
-
 	}
 
 	pathHistory history{ graph };
 	std::vector<size_t> path;
-	std::vector<double> segment_times;
 
 	size_t node = dst;
 	while (node != beg) {
@@ -105,61 +113,55 @@ export pathHistory dijkstraPathHistory(size_t beg, size_t dst, Graph& graph) {
 	path.push_back(beg);
 	std::reverse(path.begin(), path.end());
 
-	for (size_t i = 0; i < path.size() - 1; ++i) {
-		size_t from = path[i];
-		size_t to = path[i + 1];
-
-		for (Vertex v : graph.adjacentVertices(from)) {
-			if (v.number == to) {
-				segment_times.push_back(v.price);
-				break;
-			}
-		}
-	}
-
 	for (size_t i = 0; i < path.size(); ++i) {
-		double time = (i == 0) ? 0 : segment_times[i - 1];
-		history.add(path[i], time);
+		history.add(path[i], 0);
 	}
 	return history;
 }
 
-export pathHistory spectralPathHistory(size_t curr, size_t dst, Graph& graph) {
+export pathHistory spectralPathHistory(size_t beg, size_t dst, Graph& graph) {
 	CuttedLaplassian laplassian{ dst, graph };
-	EigvectorSolver solver{};
-	std::vector<double> eigen_vector = solver(laplassian);
-	eigen_vector.insert(eigen_vector.begin() + dst, 0);
+	std::vector<double> eigen_vector = EigvectorSolver{} (laplassian);
 	std::unordered_map<size_t, bool> visited;
+	pathHistory history{ graph };
+
+	eigen_vector.insert(eigen_vector.begin() + dst, 0);
 	for (size_t i = 0; i < graph.verticesCount(); ++i) {
 		visited[i] = false;
 		eigen_vector[i] = std::abs(eigen_vector[i]);
 	}
 
-	pathHistory history{ graph };
 	double price = 0;
-	auto start = std::chrono::high_resolution_clock::now();
-	auto end = std::chrono::high_resolution_clock::now();
-	double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
-	history.add(curr, elapsed_seconds);
-	
+	size_t curr = beg;
+	history.add(curr, 0);
+
 	while (curr != dst) {
-		start = std::chrono::high_resolution_clock::now();
+		auto start = std::chrono::steady_clock::now();
 
 		visited[curr] = true;
-		auto& adjacentVertices = graph.adjacentVertices(curr);
-		Vertex next = adjacentVertices[0];
-		for (auto vertex : adjacentVertices) {
-			if (eigen_vector[vertex.number] <= eigen_vector[next.number] && !visited[vertex.number])
-				next = vertex;
+
+		Vertex next = { 0, std::numeric_limits<double>::infinity() };
+		double minEigenValue = std::numeric_limits<double>::infinity();
+
+		for (int i = 0; i < graph.adjacentVerticesCount(curr); ++i) {
+			size_t vertexNumber = graph.adjacentVertexNumber(curr, i);
+			double vertexPrice = graph.adjacentVertexPrice(curr, i);
+
+			if (!visited[vertexNumber] && eigen_vector[vertexNumber] < minEigenValue) {
+				minEigenValue = eigen_vector[vertexNumber];
+				next.number = vertexNumber;
+				next.price = vertexPrice;
+			}
 		}
+
 		price += next.price;
 		curr = next.number;
 
-		end = std::chrono::high_resolution_clock::now();
-		double elapsed_seconds = std::chrono::duration<double, milli>(end - start).count();
-		history.add(curr, elapsed_seconds);
+		auto end = std::chrono::steady_clock::now();
+		double elapsed = std::chrono::duration<double, milli>(end - start).count();
+		history.add(curr, elapsed);
 	}
-	
+
 	return history;
 }
 

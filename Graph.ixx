@@ -1,4 +1,5 @@
-export module Graph;
+Ôªøexport module Graph;
+import Matrix;
 import ConstantsAndUtils;
 import std;
 using namespace std;
@@ -17,19 +18,40 @@ export struct Vertex {
 
 export class Graph {
 private:
-	vector<vector<Vertex>> adjacencyList;
+	vector<int> adjacencyList;
+	vector<double> priceList;
+	vector<int> verticesPos; // –ü–æ—Å–ª–µ–¥–Ω–∏–π —ç–ª–µ–º–µ–Ω—Ç = –¥–ª–∏–Ω–∞ adjacencyList, –¥–ª—è —É–¥–æ–±–Ω–æ–≥–æ –≤—ã—á–∏—Å–ª–µ–Ω–∏—è –∫–æ–ª–∏—á–µ—Å—Ç–≤–∞ —Å–º–µ–∂–Ω—ã—Ö –≤–µ—Ä—à–∏–Ω
 public:
-	Graph() : adjacencyList() {}
-	Graph(size_t VerticesCount) : adjacencyList(VerticesCount) {}
-	Graph(vector<vector<double>> lst);
+	Graph() : adjacencyList{}, priceList{}, verticesPos{} {}
+	Graph(size_t VerticesCount) : verticesPos(VerticesCount+1, 0) { }
+	//Graph(vector<vector<double>> lst);
 
 	vector<vector<double>> adjacencyMatrix() const;
-	size_t verticesCount() const { return adjacencyList.size(); }
-	const vector<Vertex>& adjacentVertices(size_t v) const { return adjacencyList[v]; }
+	size_t verticesCount() const { return verticesPos.size() - 1; }
+	
+	size_t adjacentVerticesCount(size_t v) const { return verticesPos[v + 1] - verticesPos[v]; }
+	size_t adjacentVertexNumber(size_t vertex, size_t i) const {
+		return adjacencyList[verticesPos[vertex] + i]; };
+	double adjacentVertexPrice(size_t vertex, size_t i) const { return priceList[verticesPos[vertex] + i]; }
 
-	void add_vertex() { adjacencyList.push_back(vector<Vertex>()); }
+	void add_vertex();
 	void addEdge(size_t beg, size_t dst, double price);
 };
+
+export class CuttedLaplassian : public SquareMatrix {
+private:
+	size_t _cutted;
+	Graph& _graph;
+public:
+	CuttedLaplassian(size_t dst, Graph& graph)
+		: _cutted{ dst }, _graph{ graph } {
+	}
+	vector<double> operator*(const vector<double>&) const override;
+	double calcRaleigh(const vector<double>&) const override;
+	double productRow(const vector<double>& v, size_t row) const override;
+	size_t size() const override { return _graph.verticesCount(); }
+};
+
 
 export using pyPathHistory = std::vector<std::pair<size_t, double>>;
 export using pyAdjacencyList = std::vector<std::vector<std::pair<size_t, double>>>;
@@ -57,21 +79,24 @@ void addRandomEdges(Graph& g, double chance, int weight_min, int weight_max);
 
 // ===== IMPL =====
 
-void Graph::addEdge(size_t beg, size_t dst, double price) {
-	if (beg == dst) return;
-	auto dst_ptr = find_if(adjacencyList[beg].begin(), adjacencyList[beg].end(),
-		[dst](Vertex v) {
-			return v.number == dst;
-		}
-	);
-
-	if (dst_ptr == adjacencyList[beg].end()) {
-		adjacencyList[beg].push_back(Vertex{ dst, static_cast<double>(price) });
-		adjacencyList[dst].push_back(Vertex{ beg, static_cast<double>(price) });
-	}
+void Graph::add_vertex() {
+	verticesPos.insert(verticesPos.begin() + adjacencyList.size(), adjacencyList.size());
 }
 
-Graph::Graph(vector<vector<double>> matrix) {
+void Graph::addEdge(size_t beg, size_t dst, double price) {
+	adjacencyList.insert(adjacencyList.begin() + verticesPos[beg], dst);
+	priceList.insert(priceList.begin() + verticesPos[beg], price);
+	for (int shiftedPositions = beg + 1; shiftedPositions < verticesPos.size(); ++shiftedPositions)
+		verticesPos[shiftedPositions]++;
+
+	adjacencyList.insert(adjacencyList.begin() + verticesPos[dst], beg);
+	priceList.insert(priceList.begin() + verticesPos[dst], price);
+	for (int shiftedPositions = dst + 1; shiftedPositions < verticesPos.size(); ++shiftedPositions)
+		verticesPos[shiftedPositions]++;
+
+}
+
+/*Graph::Graph(vector<vector<double>> matrix) {
 	adjacencyList.resize(matrix.size());
 	for (size_t i = 0; i < matrix.size(); ++i) {
 		for (size_t j = 0; j < matrix[i].size(); ++j) {
@@ -79,7 +104,7 @@ Graph::Graph(vector<vector<double>> matrix) {
 				addEdge(i, j, roundDouble(matrix[i][j]));
 		}
 	}
-}
+}*/
 
 vector<vector<double>> Graph::adjacencyMatrix() const {
 	vector<vector<double>> res(
@@ -87,20 +112,67 @@ vector<vector<double>> Graph::adjacencyMatrix() const {
 	);
 
 	for (int i = 0; i < verticesCount(); ++i) {
-		for (Vertex vertex : adjacentVertices(i))
-			res[i][vertex.number] = vertex.price;
+		for (int j = 0; j < adjacentVerticesCount(i); ++j)
+			res[i][adjacentVertexNumber(i, j)] = adjacentVertexPrice(i, j);
 	}
 
 	return res;
 }
 
+// ===== Laplassian IMPL =====
+
+double CuttedLaplassian::productRow(const vector<double>& v, size_t row) const {
+	double sum = 0;
+	for (int j = 0; j < _graph.adjacentVerticesCount(row); ++j) {
+		int vertexNumber = _graph.adjacentVertexNumber(row, j);
+		double vertexPrice = _graph.adjacentVertexPrice(row, j);
+		if (vertexNumber != _cutted)
+			sum += vertexPrice * (v[row] - v[vertexNumber]);
+		else
+			sum += vertexPrice * v[row];
+	}
+	return sum;
+}
+
+double CuttedLaplassian::calcRaleigh(const vector<double>& v) const {
+	double sum = 0;
+	for (size_t i = 0; i < _graph.verticesCount(); ++i) {
+		for (size_t j = 0; j < _graph.adjacentVerticesCount(i); ++j) {
+			size_t vertexNumber = _graph.adjacentVertexNumber(i, j);
+			size_t vertexPrice = _graph.adjacentVertexPrice(i, j);
+			if (vertexNumber >= i) { // –ú–∞—Ç—Ä–∏—Ü–∞ —Å–∏–º–º–µ—Ç—Ä–∏—á–Ω–∞, —ç–ª–µ–º–µ–Ω—Ç—ã –Ω–∏–∂–µ –≥–ª–∞–≤–Ω–æ–π –¥–∏–∞–≥–æ–Ω–∞–ª–∏ —è–≤–ª—è—é—Ç—Å—è –ø–æ–≤—Ç–æ—Ä–∞–º–∏ —Å–æ–æ—Ç–≤–µ—Ç—Å—Ç–≤—É—é—â—à–∏—Ö —ç–ª–µ–º–µ–Ω—Ç–æ–≤ –≤—ã—à–µ –≥–ª–∞–≤–Ω–æ–π –¥–∏–∞–≥–æ–Ω–∞–ª–∏
+				if (vertexNumber != _cutted) {
+					double diff = v[i] - v[vertexNumber];
+					sum += vertexPrice * diff * diff;
+				}
+				else {
+					sum += vertexPrice * v[i] * v[i];
+				}
+			}
+		}
+	}
+	return sum;
+}
+
+vector<double> CuttedLaplassian::operator*(const vector<double>& mult_vector) const {
+	vector<double> res(mult_vector.size(), 0);
+	for (size_t vertex = 0; vertex != size(); ++vertex)
+		res[vertex] = productRow(mult_vector, vertex);
+
+	res[_cutted] = 0;
+
+	return res;
+}
+
+// ===== Generation IMPL =====
+
 Graph randomGraph(GraphType type, size_t n, int weight_min, int weight_max) {
 	Graph result = createTree(n, weight_min, weight_max);
 
-	// »Á-Á‡ ‡Î„ÓËÚÏ‡ „ÂÌÂ‡ˆËË ‡Ì‰ÓÏÌ˚ı „‡ÙÓ‚, ‰‡ÊÂ ‡ÁÂÊÂÌÌ˚Â „‡Ù˚ ÔË n > 300 ÒÚ‡ÌÓ‚ˇÚÒˇ ÒÎË¯ÍÓÏ ÔÎÓÚÌ˚ÏË, 
-	// Ú.Í. Ï˚ Í‡Ê‰Û˛ ‚Â¯ËÌÛ Ô˚Ú‡ÂÏÒˇ ÔÓ‚ÂËÚ¸ Ì‡ ‰Ó·‡‚ÎÂÌËÂ ‰ÓÔÓÎÌËÚÂÎ¸ÌÓ„Ó Â·‡
-	// œÓ˝ÚÓÏÛ Ì‡Ï ÌÛÊÌÓ ÌÓÏ‡ÎËÁÓ‚˚‚‡Ú¸ ¯‡ÌÒ, cÎÂ„Í‡ ÛÏÂÌ¸¯‡ˇ Â„Ó Ò ÓÒÚÓÏ ÍÓÎË˜ÂÒÚ‚‡ ‚Â¯ËÌ
-	// —ÚÂÔÂÌÌ‡ˇ ÙÛÌÍˆËˇ a^n ÔË a ˜ÛÚ¸ ÏÂÌ¸¯ËÏ 1 Ë‰Â‡Î¸ÌÓ ÔÓ‰ıÓ‰ËÚ ‰Îˇ ˝ÚÓ„Ó
+	// –ò–∑-–∑–∞ –∞–ª–≥–æ—Ä–∏—Ç–º–∞ –≥–µ–Ω–µ—Ä–∞—Ü–∏–∏ —Ä–∞–Ω–¥–æ–º–Ω—ã—Ö –≥—Ä–∞—Ñ–æ–≤, –¥–∞–∂–µ —Ä–∞–∑—Ä–µ–∂–µ–Ω–Ω—ã–µ –≥—Ä–∞—Ñ—ã –ø—Ä–∏ n > 300 —Å—Ç–∞–Ω–æ–≤—è—Ç—Å—è —Å–ª–∏—à–∫–æ–º –ø–ª–æ—Ç–Ω—ã–º–∏, 
+	// —Ç.–∫. –º—ã –∫–∞–∂–¥—É—é –≤–µ—Ä—à–∏–Ω—É –ø—ã—Ç–∞–µ–º—Å—è –ø—Ä–æ–≤–µ—Ä–∏—Ç—å –Ω–∞ –¥–æ–±–∞–≤–ª–µ–Ω–∏–µ –¥–æ–ø–æ–ª–Ω–∏—Ç–µ–ª—å–Ω–æ–≥–æ —Ä–µ–±—Ä–∞
+	// –ü–æ—ç—Ç–æ–º—É –Ω–∞–º –Ω—É–∂–Ω–æ –Ω–æ—Ä–º–∞–ª–∏–∑–æ–≤—ã–≤–∞—Ç—å —à–∞–Ω—Å, c–ª–µ–≥–∫–∞ —É–º–µ–Ω—å—à–∞—è –µ–≥–æ —Å —Ä–æ—Å—Ç–æ–º –∫–æ–ª–∏—á–µ—Å—Ç–≤–∞ –≤–µ—Ä—à–∏–Ω
+	// –°—Ç–µ–ø–µ–Ω–Ω–∞—è —Ñ—É–Ω–∫—Ü–∏—è a^n –ø—Ä–∏ a —á—É—Ç—å –º–µ–Ω—å—à–∏–º 1 –∏–¥–µ–∞–ª—å–Ω–æ –ø–æ–¥—Ö–æ–¥–∏—Ç –¥–ª—è —ç—Ç–æ–≥–æ
 
 	if (type == GraphType::Sparse) {
 		addRandomEdges(result, normalizeChance(sparseChance, n), weight_min, weight_max);
@@ -118,8 +190,8 @@ pyAdjacencyList getAdjacencyList(const Graph& g) {
 	pyAdjacencyList result;
 	for (size_t i = 0; i < g.verticesCount(); ++i) {
 		std::vector<std::pair<size_t, double>> row;
-		for (Vertex v : g.adjacentVertices(i)) {
-			row.push_back({v.number, v.price});
+		for (int j = 0; j < g.adjacentVerticesCount(i); ++j) {
+			row.push_back({g.adjacentVertexNumber(i, j), g.adjacentVertexPrice(i, j)});
 		}
 		result.push_back(row);
 	}
